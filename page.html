@@ -1,0 +1,126 @@
+<!doctype <!DOCTYPE html>
+<html>
+<head>
+    <title>D3 Tutorial</title>
+    <!--Importing d3.js-->
+    <script src="https://d3js.org/d3.v3.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <!--<script src="main.js"></script>-->
+</head>
+<body>
+   
+    <script>
+    function findMax(data) {
+        //This function finds the max in the frequency_list that is returned from python. 
+            var valueArray = [];
+            for (var key in data) {
+                valueArray.push(data[key]);
+            }
+            return Math.max.apply(Math, valueArray); //Same as Math.max(4, 2, 6, 1, 3, 7, 5, 3);
+
+        }                   
+    // Triggered once the usuer clicks the "Find Worst Champions to play against" button using JQuery. 
+    $(function(){
+        $('a#summoner_input').bind('click', function(e){
+            e.preventDefault();
+            $.getJSON(
+                'http://ddragon.leagueoflegends.com/cdn/8.24.1/data/en_US/champion.json',  // This is general static data about a champion, and we can use it to get the name of the champions 
+                                                                                           //from the ID.
+                function(championJSON){
+                    $.getJSON(
+                        'http://127.0.0.1:5000/', // the '/' at the end tells flask which code to run.
+                        {summoner_id: $('input[name="summonerIdBox"]').val(), lane: $('#lane_select option:selected').text()} , 
+                        function(data){
+                            // This is the function that is ran once Flask returns the frequency list from get_worst_champions_to_play_against
+                            // All this is setting up are bar chart.
+                            var largest_value = findMax(data);
+                            var width = 500;
+                            var height = (60) * Object.keys(data).length + 50;
+                            var widthScale = d3.scale.linear() //sizing the data widths, with respect to the frame size.
+                                .domain([0, largest_value])
+                                .range([0, 500]);
+                            var color = d3.scale.linear()
+                                .domain([0, largest_value])
+                                .range(["red", "blue"]);
+                            var axis = d3.svg.axis()
+                                .ticks(largest_value)
+                                .scale(widthScale);
+                            // Get our canvas, and append an svg to the body, the svg is now our canvas.
+                            var canvas = d3.select("body")
+                                .append("svg")
+                                .attr("width", width)
+                                .attr("height", height)
+                                .append("g") //groups everything in the svg into a group tag.
+                                .attr("transform", "translate(40, 0)"); // set the location of the g group.
+                            
+                            // This section of code converts the champion Id's in the returned frequency list, into champion names using the static data retrieved above.
+                            var champion_keys = d3.keys(data)
+                            var champions = d3.entries(championJSON['data']);
+                            var name_list = [];
+                            var url_list = [];
+                            var champion_map = d3.map();
+                            champions.forEach(element=> {
+                                if(champion_keys.includes(element['value']['key'])){
+                                    champion_map.set(element['value']['id'], data[element['value']['key']]);
+                            }
+                        });
+                        // Here this small section of code is generating the url to retrieve each champion thumbnail image.
+                        var champion_frequency_list = d3.entries(champion_map['_']);
+                        champion_frequency_list.forEach(element=>{
+                        url_list.push('http://ddragon.leagueoflegends.com/cdn/8.24.1/img/champion/' + element['key'] + '.png');
+                        });
+                        
+                        //This section of code generates are rectangles.
+                        var bars = canvas.selectAll("rect") // use empty selection to connect it to data
+                                .data(champion_frequency_list) // binds data to the empty selections
+                                .enter() // contains place holders for each data element. 
+                                .append("rect") // for each placeholders append a rectangle. 
+                                .attr("width", d => widthScale(d['value'])) // d is each data place holder, so each placeholder's rectangle's width depends on d
+                                .attr("height", 50)
+                                .attr("id", function(d, i){var result = 'r'+ (i+1); return result;}) // giving each rectangle an id
+                                .attr("fill", d => color(d['value'])) 
+                                .attr("y", function (d, i) { return i * 60 }); // d is data, i is the index.
+                        
+                        //This is so that the axis is appended at a proper place depending on the amount of charts
+                        d3.select('#r' + Object.keys(data).length).each(function(d){
+                                canvas.append("g")
+                                    .attr("transform", "translate(0," + (parseInt(d3.select(this).attr('y')) + parseInt(d3.select(this).attr('height')) + 10) + ")")
+                                    .call(axis);
+                            });
+                        
+                        // Append the champion thumbnail images to each bar chart.
+                        d3.selectAll("rect").each(function (d, i) {
+                                canvas.append("svg:image")
+                                    .attr('x', 0)
+                                    .attr('y', d3.select(this).attr('y'))
+                                    .attr('width', 20)
+                                    .attr('height', 20)
+                                    .attr("xlink:href", url_list[i])
+
+                            });
+                });})})});
+           
+        
+    </script>
+     <div class= 'container'>
+            <h3>Welcome! Please Enter summoner id, and select lane!</h3>
+                <form>
+                    <input type=text size=5 name=summonerIdBox>
+                    <a href=# id=summoner_input><button class='btn btn-default'>Find Worst Champions to play against</button></a>
+                </form>
+                
+                <select name="lane_select" id=lane_select>
+                    <option value="Top">Top</option>
+                    <option value="Middle">Middle</option>
+                    <option value="Jungle">Jungle</option>
+                    <option value="Bottom">Bottom</option>
+                    <option value="No Lane">No Lane</option>
+                </select>
+                
+        </div>
+    <div class= 'container2'>
+        <a href="page2.html" id=get_differentials><button class='btn btn-defaul'>Get differentials from last match</button></a>
+
+    </div>
+</body>
+</html>
