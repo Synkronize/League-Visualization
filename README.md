@@ -25,3 +25,5 @@ Example video here: https://www.youtube.com/watch?v=MwZwr5Tvyxo&ab_channel=Corey
 
 Once the Flask web server is running, the only thing that should be left to do is to, to open up
 either page.html or page2.html enter in the user data and click the submit button on the page.
+
+# Note: You must put in an API key in LeagueAPI.py to be able to get information.
